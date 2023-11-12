@@ -64,6 +64,7 @@ func geocoding(address string) map[string]string {
 
 	return map[string]string{"lng": fmt.Sprintf("%f", viper.Get("result.location.lng")), "lat": fmt.Sprintf("%f", viper.Get("result.location.lat"))}
 }
+
 func directionlite_driving() {
 	// 此处填写您在控制台-应用管理-创建应用后获取的AK
 	ak := string(os.Getenv("BAIDU_AK"))

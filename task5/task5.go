@@ -73,6 +73,7 @@ func (e *SimpleORM) resetSmallormEngine() {
 	e.WhereExec = nil
 	e.UpdateParam = ""
 	e.UpdateExec = nil
+	e.FieldParam = "*"
 }
 
 func (e *SimpleORM) GetTable() string {
@@ -101,10 +102,10 @@ func (e *SimpleORM) batchInsertData(batchData interface{}, insertType string) (i
 	//字段名
 	var fieldName []string
 
-	//占位符
+	//占位符?
 	var placeholderString []string
 
-	//循环判断
+
 	for i := 0; i < l; i++ {
 		value := getValue.Index(i) // Value of item
 		typed := value.Type()      // Type of item
@@ -201,7 +202,7 @@ func (e *SimpleORM) insertData(data interface{}, insertType string) (int64, erro
 		e.AllExec = append(e.AllExec, v.Field(i).Interface())
 	}
 	e.Prepare = insertType + " into " + e.GetTable() + " (" + strings.Join(fieldName, ",") + ") values " + "(" + strings.Join(placeholder, ",") + ")"
-
+	println(e.Prepare)
 	var stmt *sql.Stmt
 	var err error
 
@@ -224,7 +225,12 @@ func (e *SimpleORM) setErrorInfo(err error) error {
 	return errors.New("File: " + file + ":" + strconv.Itoa(line) + ", " + err.Error())
 }
 
-// 插入
+ /*插入
+
+传参方式：
+1.传入结构体
+2.传入结构体切片或数组
+ */
 func (e *SimpleORM) Insert(data interface{}) (int64, error) {
 
 	//判断是批量还是单个插入
@@ -238,7 +244,12 @@ func (e *SimpleORM) Insert(data interface{}) (int64, error) {
 	}
 }
 
-// 替换插入
+ /*替换插入
+
+传参方式：
+1.传入结构体
+2.传入结构体切片或数组
+ */
 func (e *SimpleORM) Replace(data interface{}) (int64, error) {
 	//判断是批量还是单个插入
 	getValue := reflect.ValueOf(data).Kind()
@@ -247,11 +258,17 @@ func (e *SimpleORM) Replace(data interface{}) (int64, error) {
 	} else if getValue == reflect.Slice || getValue == reflect.Array {
 		return e.batchInsertData(data, "replace")
 	} else {
-		return 0, errors.New("插入的数据格式不正确，单个插入格式为: struct，批量插入格式为: []struct")
+		return 0, errors.New("插入的数据格式不正确，单个插入格式为: struct,批量插入格式为: []struct")
 	}
 }
 
-// 传入and条件
+/*where条件，支持多次调用，多次调用之间是and关系
+
+传参方式：
+1.传入结构体
+2.传入键,值
+3.传入键,操作符,值
+*/
 func (e *SimpleORM) Where(data ...interface{}) *SimpleORM {
 
 	//判断是结构体还是多个字符串
@@ -341,7 +358,8 @@ func (e *SimpleORM) Where(data ...interface{}) *SimpleORM {
 	return e
 }
 
-// 删除
+/*删除，需先调用where方法，否则会删除全表
+ */
 func (e *SimpleORM) Delete() (int64, error) {
 
 	//拼接delete sql
@@ -382,7 +400,12 @@ func (e *SimpleORM) Delete() (int64, error) {
 	return rowsAffected, nil
 }
 
-// 更新
+/*更新，需先调用where方法，否则会更新全表
+
+传参方式：
+1.传入结构体
+2.传入键值对
+ */
 func (e *SimpleORM) Update(data ...interface{}) (int64, error) {
 
 	//判断是结构体还是多个字符串
@@ -462,21 +485,134 @@ func (e *SimpleORM) Update(data ...interface{}) (int64, error) {
 	id, _ := result.RowsAffected()
 	return id, nil
 }
-func main() {
-	user2 := User1{
-		Username:   "EE",
-		Departname: "22",
-		Status:     1,
-	}
-	user3 := User1{
+//查询多条，返回值为map切片
+func (e *SimpleORM) Select() ([]map[string]string, error) {
+ 
+ 
+  //拼接sql
+  e.Prepare = "select "+e.FieldParam +" from " + e.GetTable()
+ 
+ 
+  //如果where不为空
+  if e.WhereParam != "" || e.OrWhereParam != "" {
+    e.Prepare += " where " + e.WhereParam + e.OrWhereParam
+  }
+ 
+ 
+  e.AllExec = e.WhereExec
+ 
+  //query
+  rows, err := e.Db.Query(e.Prepare, e.AllExec...)
+  if err != nil {
+    return nil, e.setErrorInfo(err)
+  }
+ 
+ 
+  //读出查询出的列字段名
+  column, err := rows.Columns()
+  if err != nil {
+    return nil, e.setErrorInfo(err)
+  }
+ 
+ 
+  //values是每个列的值，这里获取到byte里
+  values := make([][]byte, len(column))
+ 
+ 
+  //因为每次查询出来的列是不定长的，用len(column)定住当次查询的长度
+  scans := make([]interface{}, len(column))
 
-		Username:   "EE1",
-		Departname: "23",
-		Status:     0,
-	}
+ 
+  for i := range values {
+    scans[i] = &values[i]
+  }
+ 
+ 
+  results := make([]map[string]string, 0)
+  for rows.Next() {
+    if err := rows.Scan(scans...); err != nil {
+      //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
+      return nil, e.setErrorInfo(err)
+    }
+ 
+ 
+    //每行数据
+    row := make(map[string]string) 
+ 
+ 
+    //循环values数据，通过相同的下标，取column里面对应的列名，生成1个新的map
+    for k, v := range values {
+      key := column[k]
+      row[key] = string(v)
+    }
+ 
+ 
+    //添加到map切片中
+    results = append(results, row)
+  }
+ 
+ 
+  return results, nil
+}
+//查询1条
+func (e *SimpleORM) SelectOne() (map[string]string, error) {
+  
+  //limit 1 单个查询
+  results, err := e.Limit(1).Select()
+  if err != nil {
+    return nil, e.setErrorInfo(err)
+  }
+ 
+ 
+  //判断是否为空
+  if len(results) == 0 {
+    return nil, nil
+  } else {
+    return results[0], nil
+  }
+}
+
+func (e *SimpleORM)Field(fields ...string) *SimpleORM {
+  e.FieldParam = strings.Join(fields, ",")
+  return e
+}
+
+//limit分页
+func (e *SimpleORM) Limit(limit ...int64) *SimpleORM {
+  if len(limit) == 1 {
+    e.LimitParam = strconv.Itoa(int(limit[0]))
+  } else if len(limit) == 2 {
+    e.LimitParam = strconv.Itoa(int(limit[0])) + "," + strconv.Itoa(int(limit[1]))
+  } else {
+    panic("参数个数错误")
+  }
+  return e
+}
+
+type route struct {
+	ID   int	`sql:"id,auto_increment"`
+	Route string `sql:"route"`
+	Origin string `sql:"origin"`
+	Destination string	`sql:"destination"`
+}
+type alias struct {
+	ID   int `sql:"id,auto_increment"`
+	Name string	`sql:"name"`
+	Alias string	`sql:"alias"`
+}
+func main() {
+
 	e, er := NewMysql("root", "root", "localhost:3306", "record")
 	if er != nil {
 		fmt.Println(er)
 	}
-
+	out,er:=e.Table("route").Select()
+	if er != nil {
+		fmt.Println(er)
+	}
+	for _,v1:=range out{
+		for k,v:=range v1{
+			fmt.Println(k,v)
+		}
+	}
 }
