@@ -1,0 +1,137 @@
+{{define "alias/alias.html"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<style>
+  form {
+    /* 居中表单 */
+    margin: 3% auto;
+    /* Adjust the percentage as needed */
+    max-width: 600px;
+    /* 显示表单的轮廓 */
+    padding: 1em;
+    border: 1px solid #ccc;
+    border-radius: 1em;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  form li+li {
+    margin-top: 1em;
+  }
+
+  label {
+    /* 确保所有 label 大小相同并正确对齐 */
+    display: inline-block;
+    width: 100px;
+    text-align: right;
+  }
+
+  input,
+  textarea {
+    /* 确保所有文本输入框字体相同
+     textarea 默认是等宽字体 */
+    font: 1em sans-serif;
+
+    /* 使所有文本输入框大小相同 */
+    width: 300px;
+    box-sizing: border-box;
+
+    /* 调整文本输入框的边框样式 */
+    border: 1px solid #999;
+  }
+
+  input:focus,
+  textarea:focus {
+    /* 给激活的元素一点高亮效果 */
+    border-color: #000;
+  }
+
+  textarea {
+    /* 使多行文本输入框和它们的 label 正确对齐 */
+    vertical-align: top;
+
+    /* 给文本留下足够的空间 */
+    height: 5em;
+  }
+
+  .button {
+    /* 把按钮放到和文本输入框一样的位置 */
+    padding-left: 100px;
+    /* 和 label 的大小一样 */
+  }
+
+  button {
+    /* 这个外边距的大小与 label 和文本输入框之间的间距差不多 */
+    margin-left: 0.8em;
+  }
+</style>
+
+<head>
+  <title>地点别名设置</title>
+</head>
+
+<body>
+  <form action="/alias" method="post" enctype="multipart/form-data" id="alias">
+    <p>地点别名设置</p>
+    <ul>
+      <li>
+        <label for="name">地点详细名:</label>
+        <input type="text" name="name" value="北京市西城区阜外大街5号">
+      </li>
+      <li>
+        <label for="alias_name">地点别名:</label>
+        <input type="text" name="alias_name" value="阜外大街5号">
+      </li>
+      <li class="button">
+        <input type="submit" value="提交" onclick="refresh">
+      </li>
+    </ul>
+  </form>
+		<table border="1" name="table">
+			<tr>
+				{{range $key, $value := (index .StringDictArray 0)}}
+					<th>{{$key}}</th>
+				{{end}}
+			</tr>
+			{{range $index, $row := .StringDictArray}}
+				<tr>
+					{{range $key, $value := $row}}
+						<td>{{$value}}</td>
+					{{end}}
+                     <td><button onclick="deleteRow({{$index}})">删除</button></td>
+				</tr>
+			{{end}}
+		</table>
+
+			<script>
+				function deleteRow(index) {
+                    let table = document.querySelector('table');
+                    let row = table.rows[index + 1];
+                    let id=row.cells[1].innerHTML;
+					// 发送删除请求到后端
+					fetch('/alias?id=' + id, { method: 'DELETE' })
+						.then(response => {
+							if (response.ok) {
+								console.log('Delete request successful');
+								// 刷新页面或更新表格数据
+							} else {
+								console.error('Delete request failed. Status code:', response.status);
+							}
+						})
+						.catch(error => {
+							console.error('Error sending delete request:', error);
+						});
+            refresh();
+				}
+        function refresh() {
+            window.location.reload();
+        }
+			</script>
+</body>
+
+</html>
+{{end}}
