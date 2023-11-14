@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"taskA/routing"
 	"taskA/simpleorm"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -106,7 +105,6 @@ func main() {
 			Destination: route_destination,
 		})
 		c.Redirect(http.StatusMovedPermanently, "/route")
-
 	})
 	router.GET("/alias", func(c *gin.Context) {
 		out, err := e.Table("alias").Select()

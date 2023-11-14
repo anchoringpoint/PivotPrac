@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
 	"github.com/spf13/viper"
 )
 
@@ -19,7 +18,6 @@ func secondsToHMS(seconds int) (int, int, int) {
 	return hours, minutes, remainingSeconds
 }
 func geocoding(address string) map[string]string {
-	// 此处填写您在控制台-应用管理-创建应用后获取的AK
 	ak := string(os.Getenv("BAIDU_AK"))
 
 	// 服务地址
@@ -184,8 +182,7 @@ func Directionlite_driving(origin_name string, destination_name string, tatics i
 }
 
 func Directionlite_riding(origin_name string, destination_name string, riding_type string) string {
-
-	// 此处填写您在控制台-应用管理-创建应用后获取的AK
+	 
 	ak := string(os.Getenv("BAIDU_AK"))
 
 	// 服务地址
@@ -263,7 +260,7 @@ func Directionlite_riding(origin_name string, destination_name string, riding_ty
 }
 func Directionlite_walking(origin_name string, destination_name string) string {
 
-	// 此处填写您在控制台-应用管理-创建应用后获取的AK
+	 
 	ak := string(os.Getenv("BAIDU_AK"))
 
 	// 服务地址
@@ -304,7 +301,7 @@ func Directionlite_walking(origin_name string, destination_name string) string {
 	if err := viper.ReadConfig(strings.NewReader(string(body))); err != nil {
 		fmt.Println(err)
 	}
-	// Replace fmt.Println with string concatenation or buffer
+
 	var result string
 
 	result += "步行路线结果：<br>"
@@ -329,7 +326,7 @@ func Directionlite_walking(origin_name string, destination_name string) string {
 
 func Directionlite_transit(origin_name string, destination_name string, transitOptions string, transit_output_type string) string {
 
-	// 此处填写您在控制台-应用管理-创建应用后获取的AK
+	 
 	ak := string(os.Getenv("BAIDU_AK"))
 
 	// 服务地址
