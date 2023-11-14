@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"reflect"
-	"runtime"
+	_"runtime"
 	"strconv"
 	"strings"
 
@@ -220,8 +220,9 @@ func (e *SimpleORM) insertData(data interface{}, insertType string) (int64, erro
 
 // 自定义错误格式
 func (e *SimpleORM) setErrorInfo(err error) error {
-	_, file, line, _ := runtime.Caller(1)
-	return errors.New("File: " + file + ":" + strconv.Itoa(line) + ", " + err.Error())
+	// _, file, line, _ := runtime.Caller(1)
+	// return errors.New("File: " + file + ":" + strconv.Itoa(line) + ", " + err.Error())
+	return err
 }
 
  /*插入

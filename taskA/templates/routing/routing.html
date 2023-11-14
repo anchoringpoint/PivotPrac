@@ -1,0 +1,175 @@
+{{define "routing/routing.html"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<style>
+  form {
+    /* 居中表单 */
+    margin: 3% auto;
+    /* Adjust the percentage as needed */
+    max-width: 600px;
+    /* 显示表单的轮廓 */
+    padding: 1em;
+    border: 1px solid #ccc;
+    border-radius: 1em;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  form li+li {
+    margin-top: 1em;
+  }
+
+  label {
+    /* 确保所有 label 大小相同并正确对齐 */
+    display: inline-block;
+    width: 100px;
+    text-align: right;
+  }
+
+  input,
+  textarea {
+    /* 确保所有文本输入框字体相同
+     textarea 默认是等宽字体 */
+    font: 1em sans-serif;
+
+    /* 使所有文本输入框大小相同 */
+    width: 300px;
+    box-sizing: border-box;
+
+    /* 调整文本输入框的边框样式 */
+    border: 1px solid #999;
+  }
+
+  input:focus,
+  textarea:focus {
+    /* 给激活的元素一点高亮效果 */
+    border-color: #000;
+  }
+
+  textarea {
+    /* 使多行文本输入框和它们的 label 正确对齐 */
+    vertical-align: top;
+
+    /* 给文本留下足够的空间 */
+    height: 5em;
+  }
+
+  .button {
+    /* 把按钮放到和文本输入框一样的位置 */
+    padding-left: 100px;
+    /* 和 label 的大小一样 */
+  }
+
+  button {
+    /* 这个外边距的大小与 label 和文本输入框之间的间距差不多 */
+    margin-left: 0.8em;
+  }
+</style>
+
+<head>
+  <title>路线查询</title>
+</head>
+
+<body onload="showOptions()">
+  <form action="/routing" method="post" enctype="multipart/form-data" id="transportForm">
+    <p>路线查询</p>
+    <ul>
+      <li>
+        <label for="transport_type">出行类型:</label>
+        <select name="transport_type" id="transport_type" onchange="showOptions()">
+          <option value="driving">驾车</option>
+          <option value="riding">骑行</option>
+          <option value="walking">步行</option>
+          <option value="transit">公交</option>
+        </select>
+      </li>
+      <li id="routePreferences" style="display:none;">
+        <label for="route_preference">路线偏好:</label>
+        <select name="route_preference" id="route_preference">
+          <option value="fastest">时间最短</option>
+          <option value="no_highways">不走高速</option>
+          <option value="avoid_traffic">躲避拥堵</option>
+          <option value="shortest_distance">最短距离</option>
+          <option value="minimize_cost">花费最少</option>
+          <option value="prefer_main_roads">大路优先</option>
+        </select>
+      </li>
+      <li id="ridingOptions" style="display:none;">
+        <label for="riding_type">骑行类型:</label>
+        <select name="riding_type" id="riding_type">
+          <option value="regular_bike">普通自行车</option>
+          <option value="electric_bike">电动自行车</option>
+        </select>
+      </li>
+      <li id="transitOptions" style="display:none;">
+        <label for="transit_preference">公交路线偏好:</label>
+        <select name="transit_preference" id="transit_preference">
+          <option value="shortest_time">时间最短</option>
+          <option value="minimize_cost">花费最少</option>
+          <option value="taxi">出租车</option>
+        </select>
+      </li>
+        <li id="transitOutputOptions" style="display:none;">
+        <label for="transit_output_type">输出类型:</label>
+        <select name="transit_output_type" id="transit_output_type">
+          <option value="stops_information">站点信息</option>
+          <option value="route_content">路线内容</option>
+        </select>
+      </li>
+      <li>
+        <label for="orgin">起点:</label>
+        <input type="text" name="orgin" value="北京市海淀区上地十街10号">
+      </li>
+      <li>
+        <label for="destination">终点:</label>
+        <input type="text" name="destination" value="北京市西城区阜外大街5号">
+      </li>
+      <li class="button">
+        <input type="submit" value="提交">
+      </li>
+    </ul>
+  </form>
+    <div id="dynamicContent">
+        {{.DynamicHTML}}
+    </div>
+  <script>
+    function showOptions() {
+      var transportType = document.getElementById('transport_type');
+      var routePreferences = document.getElementById('routePreferences');
+      var ridingOptions = document.getElementById('ridingOptions');
+      var transitOptions = document.getElementById('transitOptions');
+
+      routePreferences.style.display = 'none';
+      ridingOptions.style.display = 'none';
+      transitOptions.style.display = 'none';
+
+      if (transportType.value === 'driving') {
+        routePreferences.style.display = 'block';
+      } else if (transportType.value === 'riding') {
+        ridingOptions.style.display = 'block';
+      } else if (transportType.value === 'transit') {
+        transitOptions.style.display = 'block';
+        let transitPreference = document.getElementById('transit_preference');
+        if(transitPreference.value != 'taxi'){
+            document.getElementById('transitOutputOptions').style.display = 'block';
+      }
+    }
+  }
+            function setFormAction() {
+            // 获取当前页面的 URL
+            var currentURL = window.location.href;
+
+            // 设置表单的 action 属性为当前页面的 URL
+            document.getElementById('myForm').action = currentURL;
+        }
+  </script>
+
+
+</body>
+
+</html>
+{{end}}

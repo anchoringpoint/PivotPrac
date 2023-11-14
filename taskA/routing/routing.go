@@ -1,7 +1,6 @@
 package routing
 
 import (
-
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/spf13/viper"
 )
-
 
 func secondsToHMS(seconds int) (int, int, int) {
 	hours := seconds / 3600
@@ -149,7 +147,7 @@ func Directionlite_driving(origin_name string, destination_name string, tatics i
 
 		resultString.WriteString("路线信息：<br>")
 		for step := range viper.Get(fmt.Sprintf("result.routes.%d.steps", result_route)).([]interface{}) {
-			resultString.WriteString(fmt.Sprintln(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", result_route, step)))+" <br>")
+			resultString.WriteString(fmt.Sprintln(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", result_route, step))) + " <br>")
 		}
 	} else {
 
@@ -178,14 +176,14 @@ func Directionlite_driving(origin_name string, destination_name string, tatics i
 
 		resultString.WriteString("路线信息：<br>")
 		for step := range viper.Get(fmt.Sprintf("result.routes.%d.steps", route)).([]interface{}) {
-			resultString.WriteString(fmt.Sprint(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", route, step)))+" <br>")
+			resultString.WriteString(fmt.Sprint(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", route, step))) + " <br>")
 		}
 	}
 
 	return resultString.String()
 }
 
-func Directionlite_riding() {
+func Directionlite_riding(origin_name string, destination_name string, riding_type string) string {
 
 	// 此处填写您在控制台-应用管理-创建应用后获取的AK
 	ak := string(os.Getenv("BAIDU_AK"))
@@ -195,28 +193,34 @@ func Directionlite_riding() {
 
 	// 接口地址
 	uri := "/directionlite/v1/riding"
-	riding_type := 0
-	fmt.Scanf("%d", &riding_type)
+
+	orgin := geocoding(origin_name)
+	destination := geocoding(destination_name)
+	if riding_type == "regular_bike" {
+		riding_type = "0"
+	} else {
+		riding_type = "1"
+	}
 	// 设置请求参数
 	params := url.Values{
-		"origin":      []string{"40.01116,116.339303"},
-		"destination": []string{"39.936404,116.452562"},
+		"origin":      []string{fmt.Sprintf("%s,%s", orgin["lat"], orgin["lng"])},
+		"destination": []string{fmt.Sprintf("%s,%s", destination["lat"], destination["lng"])},
 		"ak":          []string{ak},
-		"riding_type": []string{fmt.Sprintf("%d", riding_type)},
+		"riding_type": []string{riding_type},
 	}
 
 	// 发起请求
 	request, err := url.Parse(host + uri + "?" + params.Encode())
 	if nil != err {
 		fmt.Printf("host error: %v", err)
-		return
+		return "host error"
 	}
 
 	resp, err1 := http.Get(request.String())
 	defer resp.Body.Close()
 	if err1 != nil {
 		fmt.Printf("request error: %v", err1)
-		return
+		return "request error"
 	}
 	body, err2 := io.ReadAll(resp.Body)
 	if err2 != nil {
@@ -228,25 +232,36 @@ func Directionlite_riding() {
 		fmt.Println(err)
 	}
 
-	fmt.Println("骑行路线结果：")
+	var result string
+
+	result += "骑行路线结果：<br>"
+
 	if viper.Get("status").(float64) != 0 {
-		fmt.Println("无法到达目的地")
-		return
+		result += "无法到达目的地"
+		return result
 	}
-	if riding_type == 0 {
-		fmt.Println("骑行类型：普通自行车")
+
+	if riding_type == "regular_bike" {
+		result += "骑行类型：普通自行车<br>"
 	} else {
-		fmt.Println("骑行类型：电动自行车")
+		result += "骑行类型：电动自行车<br>"
 	}
+
 	total_seconds := viper.Get(fmt.Sprintf("result.routes.%d.duration", 0)).(float64)
 	hours, minutes, seconds := secondsToHMS(int(total_seconds))
-	fmt.Println("时间:", fmt.Sprintf("%d小时%d分钟%d秒<br>", hours, minutes, seconds))
-	fmt.Println("路线信息：")
-	for step := range viper.Get(fmt.Sprintf("result.routes.%d.steps", 0)).([]interface{}) {
-		fmt.Println(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.turn_type", 0, step)), viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", 0, step)))
+	result += fmt.Sprintf("时间: %d小时%d分钟%d秒<br>", hours, minutes, seconds)
+
+	result += "路线信息：<br>"
+	steps := viper.Get(fmt.Sprintf("result.routes.%d.steps", 0)).([]interface{})
+	for step := range steps {
+		turnType := viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.turn_type", 0, step))
+		instruction := viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", 0, step))
+		result += fmt.Sprintf("%s %s<br>", turnType, instruction)
 	}
+
+	return result
 }
-func Directionlite_walking() {
+func Directionlite_walking(origin_name string, destination_name string) string {
 
 	// 此处填写您在控制台-应用管理-创建应用后获取的AK
 	ak := string(os.Getenv("BAIDU_AK"))
@@ -257,10 +272,12 @@ func Directionlite_walking() {
 	// 接口地址
 	uri := "/directionlite/v1/walking"
 
+	origin := geocoding(origin_name)
+	destination := geocoding(destination_name)
 	// 设置请求参数
 	params := url.Values{
-		"origin":      []string{"40.01116,116.339303"},
-		"destination": []string{"39.936404,116.452562"},
+		"origin":      []string{fmt.Sprintf("%s,%s", origin["lat"], origin["lng"])},
+		"destination": []string{fmt.Sprintf("%s,%s", destination["lat"], destination["lng"])},
 		"ak":          []string{ak},
 	}
 
@@ -268,7 +285,7 @@ func Directionlite_walking() {
 	request, err := url.Parse(host + uri + "?" + params.Encode())
 	if nil != err {
 		fmt.Printf("host error: %v", err)
-		return
+		return "host error"
 	}
 
 	resp, err1 := http.Get(request.String())
@@ -276,7 +293,7 @@ func Directionlite_walking() {
 	defer resp.Body.Close()
 	if err1 != nil {
 		fmt.Printf("request error: %v", err1)
-		return
+		return "request error"
 	}
 	body, err2 := io.ReadAll(resp.Body)
 	if err2 != nil {
@@ -287,21 +304,30 @@ func Directionlite_walking() {
 	if err := viper.ReadConfig(strings.NewReader(string(body))); err != nil {
 		fmt.Println(err)
 	}
+	// Replace fmt.Println with string concatenation or buffer
+	var result string
 
-	fmt.Println("步行路线结果：")
+	result += "步行路线结果：<br>"
+
 	if viper.Get("status").(float64) != 0 {
-		fmt.Println("无法到达目的地")
-		return
+		result += "无法到达目的地"
+		return result
 	}
+
 	total_seconds := viper.Get(fmt.Sprintf("result.routes.%d.duration", 0)).(float64)
 	hours, minutes, seconds := secondsToHMS(int(total_seconds))
-	fmt.Println("时间:", fmt.Sprintf("%d小时%d分钟%d秒<br>", hours, minutes, seconds))
-	fmt.Println("路线信息：")
-	for step := range viper.Get(fmt.Sprintf("result.routes.%d.steps", 0)).([]interface{}) {
-		fmt.Println(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", 0, step)))
+	result += fmt.Sprintf("时间: %d小时%d分钟%d秒<br>", hours, minutes, seconds)
+
+	result += "路线信息：<br>"
+	steps := viper.Get(fmt.Sprintf("result.routes.%d.steps", 0)).([]interface{})
+	for step := range steps {
+		result += fmt.Sprintf("%s<br>", viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.instruction", 0, step)))
 	}
+
+	return result
 }
-func Directionlite_transit() {
+
+func Directionlite_transit(origin_name string, destination_name string, transitOptions string, transit_output_type string) string {
 
 	// 此处填写您在控制台-应用管理-创建应用后获取的AK
 	ak := string(os.Getenv("BAIDU_AK"))
@@ -312,8 +338,8 @@ func Directionlite_transit() {
 	// 接口地址
 	uri := "/directionlite/v1/transit"
 
-	orgin := geocoding("北京市海淀区上地十街10号")
-	destination := geocoding("北京市西城区阜外大街5号")
+	orgin := geocoding(origin_name)
+	destination := geocoding(destination_name)
 	params := url.Values{
 		"origin":      []string{fmt.Sprintf("%s,%s", orgin["lat"], orgin["lng"])},
 		"destination": []string{fmt.Sprintf("%s,%s", destination["lat"], destination["lng"])},
@@ -324,14 +350,14 @@ func Directionlite_transit() {
 	request, err := url.Parse(host + uri + "?" + params.Encode())
 	if nil != err {
 		fmt.Printf("host error: %v", err)
-		return
+		return "host error"
 	}
 
 	resp, err1 := http.Get(request.String())
 	defer resp.Body.Close()
 	if err1 != nil {
 		fmt.Printf("request error: %v", err1)
-		return
+		return "request error"
 	}
 	body, err2 := io.ReadAll(resp.Body)
 	if err2 != nil {
@@ -342,15 +368,19 @@ func Directionlite_transit() {
 	if err := viper.ReadConfig(strings.NewReader(string(body))); err != nil {
 		fmt.Println(err)
 	}
+
+	var result string
+
+	result += "公交路线结果：<br>"
+
 	if viper.Get("status").(float64) != 0 {
-		fmt.Println("无法到达目的地")
-		return
+		result += "无法到达目的地"
+		return result
 	}
-	fmt.Println("公交路线结果：")
 
 	result_route := 0
-	{
-		fmt.Println("时间最短的路线：")
+	if transitOptions == "shortest_time" {
+		result += "时间最短的路线：<br>"
 		result_duration := 0.0
 		for route := range viper.Get("result.routes").([]interface{}) {
 			if viper.Get(fmt.Sprintf("result.routes.%d.duration", route)).(float64) < result_duration || result_duration == 0.0 {
@@ -359,11 +389,9 @@ func Directionlite_transit() {
 			}
 		}
 		hours, minutes, seconds := secondsToHMS(int(result_duration))
-		fmt.Println("时间:", fmt.Sprintf("%d小时%d分钟%d秒<br>", hours, minutes, seconds))
-	}
-
-	{
-		fmt.Println("花费最少的路线：")
+		result += fmt.Sprintf("时间: %d小时%d分钟%d秒<br>", hours, minutes, seconds)
+	} else if transitOptions == "minimize_cost" {
+		result += "花费最少的路线：<br>"
 		result_price := 0.0
 		for route := range viper.Get("result.routes").([]interface{}) {
 			if viper.Get(fmt.Sprintf("result.routes.%d.price", route)).(float64) < result_price || result_price == 0.0 {
@@ -371,24 +399,60 @@ func Directionlite_transit() {
 				result_route = int(route)
 			}
 		}
-		fmt.Println("价格:", fmt.Sprintf("%.1f元<br>", result_price))
+		result += fmt.Sprintf("价格: %.1f元<br>", result_price)
 	}
 
-	fmt.Println("路线信息：")
-	for step := range viper.Get(fmt.Sprintf("result.routes.%d.steps", result_route)).([]interface{}) {
-		fmt.Println(viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.0.instruction", result_route, step)))
+	if transit_output_type == "stops_information" {
+		result += "站点信息：<br>"
+
+		result += "<table border='1'>"
+		result += "<tr>"
+		result += "<th>名称</th><th>路线方向</th><th>起点</th><th>终点</th><th>首班车时间</th><th>末班车时间</th><th>路段经过的站点数量</th>"
+		result += "</tr>"
+
+		steps := viper.Get(fmt.Sprintf("result.routes.%d.steps", result_route)).([]interface{})
+		for step := range steps {
+			vehicle := viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.0.vehicle", result_route, step)).(map[string]interface{})
+			if vehicle["name"] != "" {
+				vehicle_string := fmt.Sprintf(
+					"<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td></tr>",
+					vehicle["name"],
+					vehicle["direct_text"],
+					vehicle["start_name"],
+					vehicle["end_name"],
+					vehicle["start_time"],
+					vehicle["end_time"],
+					int(vehicle["stop_num"].(float64)),
+				)
+				result += vehicle_string
+			}
+		}
+
+		result += "</table>"
+	} else {
+		result += "路线内容：<br>"
+		steps := viper.Get(fmt.Sprintf("result.routes.%d.steps", result_route)).([]interface{})
+		for step := range steps {
+			result += fmt.Sprintf("%s<br>", viper.Get(fmt.Sprintf("result.routes.%d.steps.%d.0.instruction", result_route, step)))
+		}
 	}
-	fmt.Println("出租车路线结果：")
-	fmt.Println("白天价格：")
-	fmt.Println(viper.Get("result.taxi.detail.0.total_price"),"元")
 
-	fmt.Println("夜间价格：")
-	fmt.Println(viper.Get("result.taxi.detail.1.total_price"),"元")
+	if transitOptions == "taxi" {
+		result = ""
+		result += "出租车路线结果：<br>"
+		result += "白天价格：<br>"
+		result += fmt.Sprintf("%v元<br>", viper.Get("result.taxi.detail.0.total_price"))
 
-	fmt.Println("费用信息：")
-	fmt.Println(viper.Get("result.taxi.remark"))
-	
-	result_duration := viper.Get("result.taxi.duration").(float64)
-	hours, minutes, seconds := secondsToHMS(int(result_duration))
-	fmt.Println("时间:", fmt.Sprintf("%d小时%d分钟%d秒<br>", hours, minutes, seconds))
+		result += "夜间价格：<br>"
+		result += fmt.Sprintf("%v元<br>", viper.Get("result.taxi.detail.1.total_price"))
+
+		result += "费用信息：<br>"
+		result += fmt.Sprintf("%v<br>", viper.Get("result.taxi.remark"))
+
+		result_duration := viper.Get("result.taxi.duration").(float64)
+		hours, minutes, seconds := secondsToHMS(int(result_duration))
+		result += fmt.Sprintf("时间: %d小时%d分钟%d秒<br>", hours, minutes, seconds)
+	}
+
+	return result
 }

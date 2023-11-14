@@ -1,4 +1,4 @@
-{{define "alias/alias.html"}}
+{{define "route/route.html"}}
 <!DOCTYPE html>
 <html lang="zh-CN">
   <style>
@@ -76,28 +76,32 @@
 
   <body>
     <form
-      action="/alias"
+      action="/route"
       method="post"
       enctype="multipart/form-data"
-      id="alias"
+      id="route"
       onsubmit="refresh"
     >
-      <p>地点别名设置</p>
-      <ul>
-        <li>
-          <label for="name">地点详细名:</label>
-          <input type="text" name="name" value="北京市西城区阜外大街5号" />
-        </li>
-        <li>
-          <label for="alias_name">地点别名:</label>
-          <input type="text" name="alias_name" value="阜外大街5号" />
-        </li>
-        <li class="button">
-          <input type="submit" value="提交"/>
-        </li>
-      </ul>
-    </form>
-    
+  <form action="/route" method="post" enctype="multipart/form-data" id="route">
+    <p>路线定义</p>
+    <ul>
+      <li>
+        <label for="route_name">路线名称:</label>
+        <input type="text" name="route_name" value="上班">
+      </li>
+      <li>
+        <label for="route_orgin">起点:</label>
+        <input type="text" name="route_orgin" value="北京市海淀区上地十街10号">
+      </li>
+      <li>
+        <label for="route_destination">终点:</label>
+        <input type="text" name="route_destination" value="北京市西城区阜外大街5号">
+      </li>
+      <li class="button">
+        <input type="submit" value="提交">
+      </li>
+    </ul>
+  </form>
     <table border="1" name="table">
       <tr>
         {{range $key, $value := (index .StringDictArray 0)}}
@@ -109,7 +113,7 @@
         {{range $key, $value := $row}}
         <td>{{$value}}</td>
         {{end}}
-        <td><button onclick="deleteRow({{$index}})" action="\alias">删除</button></td>
+        <td><button onclick="deleteRow({{$index}})" action="\route">删除</button></td>
       </tr>
       {{end}}
     </table>
@@ -120,7 +124,7 @@
         let row = table.rows[index + 1];
         let id = row.cells[1].innerHTML;
         // 发送删除请求到后端
-        fetch("/alias?id=" + id, { method: "DELETE" })
+        fetch("/route?id=" + id, { method: "DELETE" })
           .then((response) => {
             if (response.ok) {
               console.log("Delete request successful");

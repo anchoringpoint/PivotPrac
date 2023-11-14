@@ -10,18 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type route struct {
-	id          int
-	route       string
-	origin      string
-	destination string
-}
-type alias struct {
-	id    int
-	name  string
-	alias string
-}
-
 func main() {
 	router := gin.Default()
 	e, er := simpleorm.NewMysql("root", "root", "localhost:3306", "record")
@@ -40,15 +28,33 @@ func main() {
 	router.GET("/index", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index/index.html", nil)
 	})
+	router.GET("/routing", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "routing/routing.html", nil)
+	})
 
-	router.POST("/index", func(c *gin.Context) {
+	router.POST("/routing", func(c *gin.Context) {
 		transport_type := c.PostForm("transport_type")
-		orgin := c.PostForm("orgin")
+		origin := c.PostForm("orgin")
 		destination := c.PostForm("destination")
+		{
+			orgin_alias, err := e.Table("alias").Where("alias", origin).Select()
+			if len(orgin_alias) == 0 || err != nil {
+			} else {
+				origin = orgin_alias[0]["name"]
+			}
+		}
+		{
+			destination_alias, err := e.Table("alias").Where("alias", destination).Select()
+			if len(destination_alias) == 0 || err != nil {
+			} else {
+				destination = destination_alias[0]["name"]
+			}
+		}
+		println(origin, destination)
 		route_preference := c.PostForm("route_preference")
-
 		riding_type := c.PostForm("riding_type")
 		transit_preference := c.PostForm("transit_preference")
+		transit_output_type := c.PostForm("transit_output_type")
 
 		if transport_type == "driving" {
 			tatics_map := map[string]int{
@@ -59,50 +65,48 @@ func main() {
 				"minimize_cost":     4,
 				"prefer_main_roads": 5,
 			}
-			dynamicHTML := routing.Directionlite_driving(orgin, destination, tatics_map[route_preference])
-			c.HTML(http.StatusOK, "index/index.html", gin.H{
+			dynamicHTML := routing.Directionlite_driving(origin, destination, tatics_map[route_preference])
+			c.HTML(http.StatusOK, "routing/routing.html", gin.H{
 				"DynamicHTML": template.HTML(dynamicHTML),
 			})
 		} else if transport_type == "riding" {
-			c.JSON(http.StatusOK, gin.H{
-				"status":         "posted",
-				"message":        "success",
-				"transport_type": transport_type,
-				"ridingOptions":  riding_type,
-				"orgin":          orgin,
-				"destination":    destination,
+			dynamicHTML := routing.Directionlite_riding(origin, destination, riding_type)
+			c.HTML(http.StatusOK, "routing/routing.html", gin.H{
+				"DynamicHTML": template.HTML(dynamicHTML),
 			})
 		} else if transport_type == "transit" {
-			c.JSON(http.StatusOK, gin.H{
-				"status":         "posted",
-				"message":        "success",
-				"transport_type": transport_type,
-				"transitOptions": transit_preference,
-				"orgin":          orgin,
-				"destination":    destination,
+			dynamicHTML := routing.Directionlite_transit(origin, destination, transit_preference, transit_output_type)
+			c.HTML(http.StatusOK, "routing/routing.html", gin.H{
+				"DynamicHTML": template.HTML(dynamicHTML),
 			})
 		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"status":         "posted",
-				"message":        "success",
-				"transport_type": transport_type,
-				"orgin":          orgin,
-				"destination":    destination,
+			dynamicHTML := routing.Directionlite_walking(origin, destination)
+			c.HTML(http.StatusOK, "routing/routing.html", gin.H{
+				"DynamicHTML": template.HTML(dynamicHTML),
 			})
 		}
+	})
+	router.GET("/route", func(c *gin.Context) {
+		out, err := e.Table("route").Select()
+		if err != nil {
+			fmt.Println(err)
+		}
+		c.HTML(http.StatusOK, "route/route.html", gin.H{
+			"StringDictArray": out,
+		})
 	})
 	router.POST("/route", func(c *gin.Context) {
 		route_name := c.PostForm("route_name")
 		route_orgin := c.PostForm("route_orgin")
 		route_destination := c.PostForm("route_destination")
 
-		c.JSON(http.StatusOK, gin.H{
-			"status":            "posted",
-			"message":           "success",
-			"route_name":        route_name,
-			"route_orgin":       route_orgin,
-			"route_destination": route_destination,
+		e.Table("route").Insert(simpleorm.Route{
+			Route:       route_name,
+			Origin:      route_orgin,
+			Destination: route_destination,
 		})
+		c.Redirect(http.StatusMovedPermanently, "/route")
+
 	})
 	router.GET("/alias", func(c *gin.Context) {
 		out, err := e.Table("alias").Select()
@@ -112,6 +116,12 @@ func main() {
 		c.HTML(http.StatusOK, "alias/alias.html", gin.H{
 			"StringDictArray": out,
 		})
+	})
+	router.DELETE("/route", func(c *gin.Context) {
+		id := c.Query("id")
+		e.Table("route").Where("id", id).Delete()
+		c.Redirect(http.StatusMovedPermanently, "/route")
+
 	})
 	router.POST("/alias", func(c *gin.Context) {
 		alias_name := c.PostForm("alias_name")
@@ -123,18 +133,14 @@ func main() {
 		}
 
 		e.Table("alias").Insert(alias)
-		out, err := e.Table("alias").Select()
-		if err != nil {
-			fmt.Println(err)
-		}
-		c.HTML(http.StatusOK, "alias/alias.html", gin.H{
-			"StringDictArray": out,
-		})
+		c.Redirect(http.StatusMovedPermanently, "/alias")
+
 	})
 	router.DELETE("/alias", func(c *gin.Context) {
-		println("delete")
+
 		id := c.Query("id")
 		e.Table("alias").Where("id", id).Delete()
+		c.Redirect(http.StatusMovedPermanently, "/alias")
 
 	})
 	router.Run()
