@@ -7,6 +7,7 @@ import (
 	"taskA/routing"
 	"taskA/simpleorm"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 func main() {
@@ -106,7 +107,30 @@ func main() {
 		})
 		c.Redirect(http.StatusMovedPermanently, "/route")
 	})
-	router.GET("/alias", func(c *gin.Context) {
+
+	router.DELETE("/route", func(c *gin.Context) {
+		id := c.Query("id")
+		e.Table("route").Where("id", id).Delete()
+		c.Redirect(http.StatusMovedPermanently, "/route")
+
+	})
+	router.PUT("/route", func(c *gin.Context) {
+		id := c.Query("id")
+		viper.SetConfigType("json")
+		var data map[string]string
+		if err := c.BindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+	}
+	route_to_update := simpleorm.Route{
+		Route:  data["route"],
+		Origin: data["origin"],
+		Destination: data["destination"],
+	}
+
+	e.Table("route").Where("id", id).Update(route_to_update)
+	
+	})
+		router.GET("/alias", func(c *gin.Context) {
 		out, err := e.Table("alias").Select()
 		if err != nil {
 			fmt.Println(err)
@@ -114,12 +138,6 @@ func main() {
 		c.HTML(http.StatusOK, "alias/alias.html", gin.H{
 			"StringDictArray": out,
 		})
-	})
-	router.DELETE("/route", func(c *gin.Context) {
-		id := c.Query("id")
-		e.Table("route").Where("id", id).Delete()
-		c.Redirect(http.StatusMovedPermanently, "/route")
-
 	})
 	router.POST("/alias", func(c *gin.Context) {
 		alias_name := c.PostForm("alias_name")
@@ -140,6 +158,20 @@ func main() {
 		e.Table("alias").Where("id", id).Delete()
 		c.Redirect(http.StatusMovedPermanently, "/alias")
 
+	})
+	router.PUT("/alias", func(c *gin.Context) {
+		id := c.Query("id")
+		viper.SetConfigType("json")
+		var data map[string]string
+		if err := c.BindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+	}
+	alias_to_update := simpleorm.Alias{
+		Name:  data["name"],
+		Alias: data["alias"],
+	}
+	e.Table("alias").Where("id", id).Update(alias_to_update)
+	
 	})
 	router.Run()
 }

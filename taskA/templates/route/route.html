@@ -68,6 +68,30 @@
       /* 这个外边距的大小与 label 和文本输入框之间的间距差不多 */
       margin-left: 0.8em;
     }
+            body {
+            background-color: rgba(135, 206, 235, 0.3); /* Sky Blue with 50% opacity */
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* Full viewport height */
+            margin: 0;
+            padding: 0;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+
+            margin: 10px;
+        }
+
+        a {
+            text-decoration: none;
+            color: black;
+            font-size: larger;
+        }
   </style>
 
   <head>
@@ -75,6 +99,11 @@
   </head>
 
   <body>
+<ul>
+<li><a href="/routing">路线规划</a></li>
+<li><a href="/alias">别名设置</a></li>
+<li><a href="/route">路线设置</a></li>
+<br>
     <form
       action="/route"
       method="post"
@@ -111,14 +140,71 @@
       {{range $index, $row := .StringDictArray}}
       <tr>
         {{range $key, $value := $row}}
-        <td>{{$value}}</td>
+        <td contenteditable="true">{{$value}}</td>
         {{end}}
+        <td><button onclick="updateRow({{$index}})" action="\alias">更新</button></td>
         <td><button onclick="deleteRow({{$index}})" action="\route">删除</button></td>
+        <td><button onclick="useRow({{$index}})">使用当前行</button></td>
       </tr>
       {{end}}
     </table>
 
     <script>
+      function useRow(index){
+        let table = document.querySelector("table");
+        let row = table.rows[index + 1];
+        let cells = row.cells;
+        let route = cells[3].innerHTML;
+        let origin = cells[2].innerHTML;
+        let destination = cells[0].innerHTML;
+
+                let url = `routing?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+                window.location.href = url;
+      }
+      function updateRow(index) {
+        let table = document.querySelector("table");
+        let row = table.rows[index + 1];
+        let id = row.cells[1].innerHTML;
+        let cells = row.cells;
+
+        // Prepare data to send to the server
+
+        var updatedData = {};
+        updatedData["id"] = id;
+        updatedData["route"] = cells[3].innerHTML;
+        updatedData["origin"] = cells[2].innerHTML;
+        updatedData["destination"] = cells[0].innerHTML;
+
+        // Assuming you have a function to send data to the server, for example using fetch API
+        sendDataToServer(updatedData);
+      }
+
+      function sendDataToServer(data) {
+        // Use fetch API or another method to send data to the server
+        // Replace 'your_server_endpoint' with the actual endpoint where you want to send the data
+        fetch("/route?id=" + data["id"].toString(), {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        })
+          .then((response) => {
+            if (response.ok) {
+              console.log("Put request successful");
+              // 刷新页面或更新表格数据
+              refresh();
+            } else {
+              console.error(
+                "Put request failed. Status code:",
+                response.status
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending put request:", error);
+          });
+      }
       function deleteRow(index) {
         let table = document.querySelector("table");
         let row = table.rows[index + 1];
